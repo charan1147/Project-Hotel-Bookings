@@ -12,15 +12,14 @@ import helmet from "helmet";
 dotenv.config();
 const app = express();
 
-// ✅ Safer CORS config that supports both localhost & production
 const allowedOrigins = [
-  "http://localhost:5173", // Dev frontend
-  "https://your-production-url.com", // Replace with your actual deployed frontend
+  "http://localhost:5173",
+  process.env.FRONTEND_URL || "https://your-frontend-url.com", // Add to .env
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -35,15 +34,12 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
 
-// API Routes
 app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/booking", bookingRoutes);
 
-// Central Error Handler
 app.use(errorHandler);
 
-// Start server after connecting to DB
 const PORT = process.env.PORT || 5010;
 const startServer = async () => {
   try {
@@ -52,7 +48,7 @@ const startServer = async () => {
       console.log(`✅ Server running at: http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error(" Failed to start server:", error.message);
+    console.error("Failed to start server:", error.message);
     process.exit(1);
   }
 };
