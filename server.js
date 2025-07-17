@@ -12,24 +12,20 @@ import helmet from "helmet";
 dotenv.config();
 const app = express();
 
-const allowedOrigins = [
+const allowedOrigins = [process.env.FRONTEND_URL];
 
-  process.env.FRONTEND_URL, 
-];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS: " + origin));
-      }
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: async (origin) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return true;
+    }
+    throw new Error(`Not allowed by CORS: ${origin}`);
+  },
+  credentials: true,
+};
 
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
@@ -45,7 +41,7 @@ const startServer = async () => {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(`✅ Server running at: http://localhost:${PORT}`);
+      console.log(` Server running at: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error.message);
