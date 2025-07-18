@@ -12,15 +12,18 @@ import helmet from "helmet";
 dotenv.config();
 const app = express();
 
-const allowedOrigins = [process.env.FRONTEND_URL];
-
+const allowedOrigins = [
+  process.env.FRONTEND_URL, 
+  "http://localhost:5173", 
+];
 
 const corsOptions = {
-  origin: async (origin) => {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      return true;
+      callback(null, true);
+    } else {
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
-    throw new Error(`Not allowed by CORS: ${origin}`);
   },
   credentials: true,
 };
@@ -37,11 +40,12 @@ app.use("/api/booking", bookingRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5010;
+
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log(` Server running at: http://localhost:${PORT}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running at: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error.message);
