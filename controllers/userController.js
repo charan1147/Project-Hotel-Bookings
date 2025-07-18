@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import generateToken from "../config/genrateToken.js";
 
+// ✅ Register
 export const register = async (req, res, next) => {
   try {
     const { password, role, ...rest } = req.body;
@@ -23,25 +24,20 @@ export const register = async (req, res, next) => {
 
     const { password: userPassword, ...userData } = user._doc;
 
-    res
-      .cookie("authToken", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      })
-      .status(201)
-      .json({
-        success: true,
-        user: userData,
-        message: "User created successfully",
-      });
+    // ⛔ Removed res.cookie – now send token in body
+    res.status(201).json({
+      success: true,
+      user: userData,
+      token,
+      message: "User created successfully",
+    });
   } catch (error) {
     console.error("Error in register controller:", error.message);
     res.status(400).json({ success: false, message: "Email already exists" });
   }
 };
 
+// ✅ Login
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -74,28 +70,23 @@ export const login = async (req, res, next) => {
 
     const { password: userPassword, ...userData } = user._doc;
 
-    res
-      .cookie("authToken", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      })
-      .status(200)
-      .json({ success: true, user: userData, message: "Login successful" });
+    // ⛔ Removed res.cookie – now send token in body
+    res.status(200).json({
+      success: true,
+      user: userData,
+      token,
+      message: "Login successful",
+    });
   } catch (error) {
     console.error("Error in login controller:", error.message);
     next(error);
   }
 };
 
+// ✅ Logout – just frontend localStorage cleanup now
 export const logout = (req, res, next) => {
   try {
-    res.clearCookie("authToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
-    });
+    // No cookie to clear – logout is handled client-side
     res.status(200).json({ success: true, message: "Logout successful" });
   } catch (error) {
     console.error("Error in logout controller:", error.message);
@@ -103,6 +94,7 @@ export const logout = (req, res, next) => {
   }
 };
 
+// ✅ Get All Users
 export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select("-password");
@@ -113,6 +105,7 @@ export const getUsers = async (req, res, next) => {
   }
 };
 
+// ✅ Get Single User
 export const getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -128,6 +121,7 @@ export const getUser = async (req, res, next) => {
   }
 };
 
+// ✅ Profile
 export const profile = async (req, res, next) => {
   try {
     const user = req.user;
@@ -143,15 +137,11 @@ export const profile = async (req, res, next) => {
   }
 };
 
+// ✅ Delete Account
 export const deleteUser = async (req, res, next) => {
   try {
     await User.findByIdAndDelete(req.user._id);
-
-    res.clearCookie("authToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
-    });
+    // No cookie to clear anymore
     res
       .status(200)
       .json({ success: true, message: "Account deleted successfully" });
@@ -160,4 +150,3 @@ export const deleteUser = async (req, res, next) => {
     next(error);
   }
 };
-

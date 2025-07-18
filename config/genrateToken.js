@@ -1,26 +1,47 @@
 import jwt from "jsonwebtoken";
+import User from "../models/userModel.js";
 
-const generateToken = (user, expiresIn = "7d") => {
+const auth = async (req, res, next) => {
+  try {
     if (!process.env.JWT_SECRET) {
-        throw new Error("Server configuration error: JWT_SECRET missing");
+      return res
+        .status(500)
+        .json({ message: "Server configuration error: JWT_SECRET not set" });
+    }
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "No authorization token provided" });
     }
 
-    try {
-        const payload = {
-            id: user._id,
-            email: user.email,
-            role: user.role, 
-        };
-
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
-        return token;
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.error("Error generating token:", error.message);
-        }
-        throw new Error("Token generation failed");
+    const data = jwt.verify(token, process.env.JWT_SECRET);
+    if (!data?.id) {
+      return res.status(401).json({ message: "Invalid token payload" });
     }
+
+    const user = await User.findById(data.id).select("-password").lean();
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("Error in auth middleware:", error.message);
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+    return res.status(500).json({ message: "Server error" });
+  }
 };
 
-export default generateToken;
-
+export default auth;
