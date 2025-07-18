@@ -1,47 +1,24 @@
 import jwt from "jsonwebtoken";
-import User from "../models/userModel.js";
 
-const auth = async (req, res, next) => {
+const generateToken = (user, expiresIn = "7d") => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("Server configuration error: JWT_SECRET missing");
+  }
+
+  const payload = {
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  };
+
   try {
-    if (!process.env.JWT_SECRET) {
-      return res
-        .status(500)
-        .json({ message: "Server configuration error: JWT_SECRET not set" });
-    }
-    const authHeader = req.header("Authorization");
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : null;
-
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "No authorization token provided" });
-    }
-
-    const data = jwt.verify(token, process.env.JWT_SECRET);
-    if (!data?.id) {
-      return res.status(401).json({ message: "Invalid token payload" });
-    }
-
-    const user = await User.findById(data.id).select("-password").lean();
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    req.user = user;
-    next();
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
   } catch (error) {
-    console.error("Error in auth middleware:", error.message);
-
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error generating token:", error.message);
     }
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expired" });
-    }
-    return res.status(500).json({ message: "Server error" });
+    throw new Error("Token generation failed");
   }
 };
 
-export default auth;
+export default generateToken;
