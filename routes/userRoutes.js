@@ -14,3 +14,4 @@ router.get("/",auth, checkRole("admin"), getUsers);
 router.get("/:id",auth, checkRole("admin"), getUser);
 
 export default router
+

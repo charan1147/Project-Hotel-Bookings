@@ -13,3 +13,4 @@ router.delete('/:id', auth, checkRole('user'), deleteBooking);
 router.put("/confirm/:id", auth,checkRole('admin'), confirmBooking);
 router.delete("/cancel/:id", auth,checkRole('admin'), cancelBooking);
 export default router     
+
