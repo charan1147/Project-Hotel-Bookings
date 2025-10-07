@@ -2,7 +2,6 @@ import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import generateToken from "../config/genrateToken.js";
 
-// ✅ Register
 export const register = async (req, res, next) => {
   try {
     const { password, role, ...rest } = req.body;
@@ -24,7 +23,6 @@ export const register = async (req, res, next) => {
 
     const { password: userPassword, ...userData } = user._doc;
 
-    // ⛔ Removed res.cookie – now send token in body
     res.status(201).json({
       success: true,
       user: userData,
@@ -37,7 +35,7 @@ export const register = async (req, res, next) => {
   }
 };
 
-// ✅ Login
+
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -70,7 +68,6 @@ export const login = async (req, res, next) => {
 
     const { password: userPassword, ...userData } = user._doc;
 
-    // ⛔ Removed res.cookie – now send token in body
     res.status(200).json({
       success: true,
       user: userData,
@@ -83,10 +80,9 @@ export const login = async (req, res, next) => {
   }
 };
 
-// ✅ Logout – just frontend localStorage cleanup now
+
 export const logout = (req, res, next) => {
   try {
-    // No cookie to clear – logout is handled client-side
     res.status(200).json({ success: true, message: "Logout successful" });
   } catch (error) {
     console.error("Error in logout controller:", error.message);
@@ -94,7 +90,7 @@ export const logout = (req, res, next) => {
   }
 };
 
-// ✅ Get All Users
+
 export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select("-password");
@@ -105,7 +101,6 @@ export const getUsers = async (req, res, next) => {
   }
 };
 
-// ✅ Get Single User
 export const getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -121,7 +116,6 @@ export const getUser = async (req, res, next) => {
   }
 };
 
-// ✅ Profile
 export const profile = async (req, res, next) => {
   try {
     const user = req.user;
@@ -137,11 +131,9 @@ export const profile = async (req, res, next) => {
   }
 };
 
-// ✅ Delete Account
 export const deleteUser = async (req, res, next) => {
   try {
     await User.findByIdAndDelete(req.user._id);
-    // No cookie to clear anymore
     res
       .status(200)
       .json({ success: true, message: "Account deleted successfully" });

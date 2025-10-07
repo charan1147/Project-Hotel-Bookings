@@ -22,11 +22,13 @@ const corsOptions = {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`Not allowed by CORS: ${origin}`));
+      console.warn(`Blocked CORS request from: ${origin}`);
+      callback(null, false); 
     }
   },
   credentials: true,
 };
+
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
