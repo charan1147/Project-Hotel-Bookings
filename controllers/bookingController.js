@@ -1,6 +1,6 @@
 import Booking from "../models/bookingModel.js";
 import Room from "../models/roomModel.js";
-import { generateDateRange } from "../config/dateRange.js";
+import { generateDateRange } from "../config/dateConfig.js";
 
 const datesOverlap = (existing, requested) =>
   existing.some((d) => requested.includes(d));
