@@ -1,14 +1,14 @@
-export const generateDateRange = (startDate, endDate) => {
-  if (!startDate || !endDate || new Date(startDate) > new Date(endDate)) {
-    throw new Error("Invalid date range");
-  }
+export const generateDateRange = (start, end) => {
   const dates = [];
-  let currentDate = new Date(startDate);
-  const lastDate = new Date(endDate);
+  let current = new Date(start);
+  const last = new Date(end);
 
-  while (currentDate <= lastDate) {
-    dates.push(new Date(currentDate).toISOString().split("T")[0]);
-    currentDate.setDate(currentDate.getDate() + 1);
+  if (current > last) throw new Error("Invalid date range");
+
+  while (current <= last) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
   }
+
   return dates;
 };
