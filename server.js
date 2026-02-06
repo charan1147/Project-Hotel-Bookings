@@ -22,7 +22,7 @@ app.use(
   }),
 );
 
-app.use("/api/user", userRoutes);
+app.use("/api/auth", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/booking", bookingRoutes);
 

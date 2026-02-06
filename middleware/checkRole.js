@@ -1,4 +1,8 @@
-export const checkRole = (role) => (req, res, next) =>
-  req.user.role === role
-    ? next()
-    : res.status(403).json({ message: "Forbidden" });
+const admin = (req, res, next) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ message: "Admin access only" });
+  }
+  next();
+};
+
+export default admin;

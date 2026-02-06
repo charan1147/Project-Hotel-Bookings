@@ -2,16 +2,15 @@ import mongoose from "mongoose";
 
 const roomSchema = new mongoose.Schema(
   {
-    name: String,
-    price: Number,
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
     description: String,
-    number: { type: Number, unique: true, index: true },
+    number: { type: Number, unique: true, required: true },
     status: {
       type: String,
-      enum: ["available", "unavailable"],
+      enum: ["available", "maintenance"],
       default: "available",
     },
-    unavailableDates: [String],
   },
   { timestamps: true },
 );

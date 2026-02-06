@@ -1,161 +1,93 @@
-import Booking from "../models/bookingModel.js";
-import Room from "../models/roomModel.js";
-import { generateDateRange } from "../config/dateConfig.js";
+import Booking from "../models/Booking.js";
+import Room from "../models/Room.js";
+import { generateDateRange } from "../config/dateRange.js";
 
+const datesOverlap = (existing, requested) =>
+  existing.some((d) => requested.includes(d));
 
-const hasDateConflict = (existingBookings, requestedRange) =>
-  existingBookings.some((b) =>
-    generateDateRange(b.checkInDate, b.checkOutDate).some((d) =>
-      requestedRange.includes(d),
-    ),
-  );
-
-
-export const createBookingRoom = async (req, res) => {
-  const { roomId, checkInDate, checkOutDate } = req.body;
+export const createBooking = async (req, res) => {
+  const { roomId, checkInDate, checkOutDate, name, email } = req.body;
 
   const room = await Room.findById(roomId);
-  if (!room)
-    return res.status(404).json({ success: false, message: "Room not found" });
+  if (!room) return res.status(404).json({ message: "Room not found" });
 
-  const requestedRange = generateDateRange(checkInDate, checkOutDate);
-  const bookings = await Booking.find({ roomId });
+  const requestedDates = generateDateRange(checkInDate, checkOutDate);
 
-  if (hasDateConflict(bookings, requestedRange)) {
-    return res.status(409).json({
-      success: false,
-      message: `Room is unavailable from ${checkInDate} to ${checkOutDate}`,
-    });
+  const conflicting = await Booking.find({
+    roomId,
+    $or: [
+      {
+        checkInDate: { $lte: checkOutDate },
+        checkOutDate: { $gte: checkInDate },
+      },
+    ],
+  });
+
+  if (
+    datesOverlap(
+      conflicting
+        .map((b) => generateDateRange(b.checkInDate, b.checkOutDate))
+        .flat(),
+      requestedDates,
+    )
+  ) {
+    return res
+      .status(409)
+      .json({ message: "Room not available in selected dates" });
   }
 
-  const booking = await Booking.create(req.body);
-
-  room.unavailableDates.push(...requestedRange);
-  await room.save();
-
-  res.status(201).json({
-    success: true,
-    data: booking,
-    message: "Booking successfully created",
+  const booking = await Booking.create({
+    roomId,
+    userId: req.user._id,
+    name: name || req.user.name,
+    email: email || req.user.email,
+    checkInDate,
+    checkOutDate,
   });
+
+  res.status(201).json(booking);
 };
-
-
-export const getBookings = async (req, res) => {
-  const bookings = await Booking.find().populate(
-    "roomId",
-    "name price unavailableDates",
-  );
-  res.json({ success: true, data: bookings });
-};
-
 
 export const getMyBookings = async (req, res) => {
-  const bookings = await Booking.find({ email: req.user.email }).populate(
+  const bookings = await Booking.find({ userId: req.user._id }).populate(
     "roomId",
-    "name price unavailableDates",
+    "name price number",
   );
-  res.json({ success: true, data: bookings });
+  res.json(bookings);
 };
 
-
-export const getBooking = async (req, res) => {
-  const booking = await Booking.findById(req.params.id).populate(
-    "roomId",
-    "name price unavailableDates",
-  );
-
-  if (!booking)
-    return res
-      .status(404)
-      .json({ success: false, message: "Booking not found" });
-
-  res.json({ success: true, data: booking });
+export const getAllBookings = async (req, res) => {
+  const bookings = await Booking.find()
+    .populate("roomId", "name price number")
+    .populate("userId", "name email");
+  res.json(bookings);
 };
-
-
-export const updateBooking = async (req, res) => {
-  const { checkInDate, checkOutDate } = req.body;
-
-  const booking = await Booking.findById(req.params.id);
-  if (!booking)
-    return res
-      .status(404)
-      .json({ success: false, message: "Booking not found" });
-
-  const room = await Room.findById(booking.roomId);
-  if (!room)
-    return res.status(404).json({ success: false, message: "Room not found" });
-
-  const requestedRange = generateDateRange(checkInDate, checkOutDate);
-
-  const otherBookings = await Booking.find({
-    roomId: booking.roomId,
-    _id: { $ne: booking._id },
-  });
-
-  if (hasDateConflict(otherBookings, requestedRange)) {
-    return res.status(409).json({
-      success: false,
-      message: `Room is unavailable from ${checkInDate} to ${checkOutDate}`,
-    });
-  }
-
-  const oldRange = generateDateRange(booking.checkInDate, booking.checkOutDate);
-  room.unavailableDates = room.unavailableDates.filter(
-    (d) => !oldRange.includes(d),
-  );
-
-  const updatedBooking = await Booking.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true },
-  );
-
-  room.unavailableDates.push(...requestedRange);
-  await room.save();
-
-  res.json({ success: true, data: updatedBooking });
-};
-
-
-export const deleteBooking = async (req, res) => {
-  const booking = await Booking.findById(req.params.id);
-  if (!booking)
-    return res
-      .status(404)
-      .json({ success: false, message: "Booking not found" });
-
-  const room = await Room.findById(booking.roomId);
-  if (room) {
-    const range = generateDateRange(booking.checkInDate, booking.checkOutDate);
-    room.unavailableDates = room.unavailableDates.filter(
-      (d) => !range.includes(d),
-    );
-    await room.save();
-  }
-
-  await booking.deleteOne();
-  res.json({ success: true, message: "Booking deleted successfully" });
-};
-
 
 export const confirmBooking = async (req, res) => {
   const booking = await Booking.findByIdAndUpdate(
     req.params.id,
     { confirmed: true },
     { new: true },
-  );
-
+  ).populate("roomId");
   if (!booking) return res.status(404).json({ message: "Booking not found" });
-
-  res.json({ message: "Booking confirmed!", booking });
+  res.json(booking);
 };
-
 
 export const cancelBooking = async (req, res) => {
   const booking = await Booking.findByIdAndDelete(req.params.id);
   if (!booking) return res.status(404).json({ message: "Booking not found" });
+  res.json({ message: "Booking cancelled" });
+};
 
-  res.json({ message: "Booking canceled successfully" });
+export const deleteMyBooking = async (req, res) => {
+  const booking = await Booking.findOneAndDelete({
+    _id: req.params.id,
+    userId: req.user._id,
+    confirmed: false,
+  });
+  if (!booking)
+    return res
+      .status(404)
+      .json({ message: "Booking not found or already confirmed" });
+  res.json({ message: "Booking deleted" });
 };
