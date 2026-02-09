@@ -2,20 +2,26 @@ import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     roomId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Room",
       required: true,
     },
-    name: String,
-    email: String,
-    checkInDate: Date,
-    checkOutDate: Date,
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    checkIn: { type: Date, required: true },
+    checkOut: { type: Date, required: true },
     confirmed: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
 
-const Booking = mongoose.model("Booking", bookingSchema);
+bookingSchema.index({ roomId: 1, checkIn: 1, checkOut: 1 });
+bookingSchema.index({ userId: 1 });
 
-export default Booking
+export default mongoose.model("Booking", bookingSchema);
