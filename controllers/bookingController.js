@@ -9,22 +9,12 @@ export const createBooking = async (req, res) => {
     const cin = new Date(checkIn);
     const cout = new Date(checkOut);
 
-    if (isNaN(cin.getTime()) || isNaN(cout.getTime()) || cout <= cin) {
-      return res.status(400).json({
-        message: "Invalid date range — check-out must be after check-in",
-      });
+    if (isNaN(cin) || isNaN(cout) || cout <= cin) {
+      return res.status(400).json({ message: "Invalid date range" });
     }
 
     const room = await Room.findById(roomId);
-    if (!room) {
-      return res.status(404).json({ message: "Room not found" });
-    }
-
-    if (room.status === "maintenance") {
-      return res
-        .status(400)
-        .json({ message: "This room is under maintenance" });
-    }
+    if (!room) return res.status(404).json({ message: "Room not found" });
 
     const conflict = await Booking.findOne({
       roomId,
@@ -32,15 +22,13 @@ export const createBooking = async (req, res) => {
     });
 
     if (conflict) {
-      return res
-        .status(409)
-        .json({ message: "Room is already booked for the selected dates" });
+      return res.status(409).json({ message: "Room already booked" });
     }
 
     const booking = await Booking.create({
       userId: user._id,
       roomId,
-      name: name || user.name || "Guest User",
+      name: name || user.name || "Guest",
       email: email || user.email || "guest@example.com",
       checkIn: cin,
       checkOut: cout,
@@ -52,9 +40,8 @@ export const createBooking = async (req, res) => {
     );
 
     res.status(201).json(populated);
-  } catch (err) {
-    console.error("Create booking error:", err);
-    res.status(500).json({ message: "Server error while creating booking" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to create booking" });
   }
 };
 
@@ -62,12 +49,10 @@ export const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ userId: req.user._id })
       .populate("roomId", "name price number status")
-      .sort({ checkIn: -1 })
-      .lean();
-
+      .sort({ checkIn: -1 });
     res.json(bookings);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch your bookings" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get your bookings" });
   }
 };
 
@@ -76,12 +61,10 @@ export const getAllBookings = async (req, res) => {
     const bookings = await Booking.find()
       .populate("roomId", "name price number status")
       .populate("userId", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
-
+      .sort({ createdAt: -1 });
     res.json(bookings);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch all bookings" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get all bookings" });
   }
 };
 
@@ -90,15 +73,12 @@ export const confirmBooking = async (req, res) => {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { confirmed: true },
-      { new: true, runValidators: true },
+      { new: true },
     ).populate("roomId", "name price number status");
 
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
     res.json(booking);
-  } catch (err) {
+  } catch (error) {
     res.status(500).json({ message: "Failed to confirm booking" });
   }
 };
@@ -106,11 +86,9 @@ export const confirmBooking = async (req, res) => {
 export const cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findByIdAndDelete(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-    res.json({ message: "Booking cancelled and removed" });
-  } catch (err) {
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    res.json({ message: "Booking cancelled" });
+  } catch (error) {
     res.status(500).json({ message: "Failed to cancel booking" });
   }
 };
@@ -124,14 +102,11 @@ export const deleteMyBooking = async (req, res) => {
     });
 
     if (!booking) {
-      return res.status(400).json({
-        message:
-          "Booking not found, does not belong to you, or is already confirmed",
-      });
+      return res.status(400).json({ message: "Cannot delete this booking" });
     }
 
-    res.json({ message: "Your booking was deleted successfully" });
-  } catch (err) {
+    res.json({ message: "Booking deleted" });
+  } catch (error) {
     res.status(500).json({ message: "Failed to delete booking" });
   }
 };
