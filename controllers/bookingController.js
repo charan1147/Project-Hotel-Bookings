@@ -98,7 +98,6 @@ export const deleteMyBooking = async (req, res) => {
     const booking = await Booking.findOneAndDelete({
       _id: req.params.id,
       userId: req.user._id,
-      confirmed: false,
     });
 
     if (!booking) {
