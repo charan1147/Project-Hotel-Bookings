@@ -1,30 +1,36 @@
 import Booking from "../models/bookingModel.js";
 import Room from "../models/roomModel.js";
+import { toUTCDate,getOverlapQuery } from "../config/dateConfig.js";
 
 export const createBooking = async (req, res) => {
+  try{
+  const { roomId, checkIn, checkOut, name, email } = req.body;
+  const user = req.user;
+
+  let cin, cout;
   try {
-    const { roomId, checkIn, checkOut, name, email } = req.body;
-    const user = req.user;
+    cin = toUTCDate(checkIn);
+    cout = toUTCDate(checkOut);
+  } catch {
+    return res.status(400).json({ message: "Invalid check-in or check-out date" });
+  }
 
-    const cin = new Date(checkIn);
-    const cout = new Date(checkOut);
+  if (cout <= cin) {
+    return res.status(400).json({ message: "Check-out must be after check-in" });
+  }
 
-    if (isNaN(cin) || isNaN(cout) || cout <= cin) {
-      return res.status(400).json({ message: "Invalid date range" });
-    }
+  const room = await Room.findById(roomId);
+  if (!room) return res.status(404).json({ message: "Room not found" });
 
-    const room = await Room.findById(roomId);
-    if (!room) return res.status(404).json({ message: "Room not found" });
+  const conflict = await Booking.findOne({
+    roomId,
+    ...getOverlapQuery(cin, cout),
+  });
 
-    const conflict = await Booking.findOne({
-      roomId,
-      $or: [{ checkIn: { $lt: cout }, checkOut: { $gt: cin } }],
-    });
-
-    if (conflict) {
-      return res.status(409).json({ message: "Room already booked" });
-    }
-
+  if (conflict) {
+    return res.status(409).json({ 
+      message: "Room is not available for the selected dates"});
+  }
     const booking = await Booking.create({
       userId: user._id,
       roomId,

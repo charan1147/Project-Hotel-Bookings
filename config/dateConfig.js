@@ -1,12 +1,13 @@
-export const generateDateRange = (start, end) => {
-  const dates = [];
-  let current = new Date(start);
-  const last = new Date(end);
-  
-  while (current <= last) {
-    dates.push(current.toISOString().slice(0, 10));
-    current.setDate(current.getDate() + 1);
-  }
-
-  return dates;
+export const toUTCDate = (dateInput) => {
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) throw new Error("Invalid date");
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 };
+
+export const getOverlapQuery = (cin, cout) => ({
+  $or: [
+    { checkIn: { $lt: cout }, checkOut: { $gt: cin } },
+    { checkIn: { $eq: cout } },
+    { checkOut: { $eq: cin } },
+  ],
+});
