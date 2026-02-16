@@ -3,9 +3,9 @@ import Room from "../models/roomModel.js";
 export const createRoom = async (req, res) => {
   try {
     const room = await Room.create(req.body);
-    res.status(201).json(room);
+    res.status(201).json({ data: room });
   } catch (error) {
-    res.status(500).json({ message: "Failed to create room" });
+    res.status(500).json({ message: "Failed to create rooms" });
   }
 };
 
